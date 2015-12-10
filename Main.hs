@@ -66,8 +66,9 @@ hasWinner (Board rows) =
     diagonal = zipWith (!!)
 
 isFull :: Board -> Bool
-isFull = undefined
+isFull (Board rows) = all (/= E) $ concat rows
 
 main :: IO ()
 main = do
   putStrLn "Hello World"
+
