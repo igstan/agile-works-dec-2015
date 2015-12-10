@@ -1,19 +1,31 @@
 module Main where
 
-data Mark = X | O | Empty
+import Data.List (intersperse)
 
-type Board = [[Mark]]
+data Mark = X | O | E
+
+data Board = Board [[Mark]]
 
 data GameState =
   GameState {
     board :: Board
   }
 
+
+instance Show Mark where
+  show X = "X"
+  show O = "O"
+  show E = "."
+
+instance Show Board where
+  show (Board rows) = concat . intersperse "\n" . map showRow $ rows
+    where showRow = intersperse ' ' . concat . map show
+
 testBoard =
-  [
-    [X, O, Empty],
-    [X, O, Empty],
-    [X, O, Empty]
+  Board [
+    [X, O, E],
+    [X, O, E],
+    [X, O, E]
   ]
 
 main :: IO ()
