@@ -68,7 +68,23 @@ hasWinner (Board rows) =
 isFull :: Board -> Bool
 isFull (Board rows) = all (/= E) $ concat rows
 
-main :: IO ()
-main = do
-  putStrLn "Hello World"
+emptyBoard = Board [[E,E,E], [E,E,E], [E,E,E]]
 
+loop :: Board -> IO ()
+loop board =
+  do
+  line <- getLine
+  case readPosition line of
+    Left msg -> putStrLn ("Error: " ++ msg)
+    Right pos -> do
+      let newBoard = addMark pos X board
+      putStrLn $ show $ newBoard
+      loop newBoard
+
+
+main :: IO ()
+main =
+  do
+  putStrLn "Hello!"
+  putStrLn "Let's play Tic-Tac-Toe!"
+  loop emptyBoard
