@@ -1,6 +1,6 @@
 module Main where
 
-import Data.List (intersperse)
+import Data.List (intersperse, transpose)
 
 data Mark = X | O | E deriving Eq
 
@@ -53,7 +53,20 @@ addMark (col, row) mark (Board rows) = fmap Board $ sequence $ zipWith mapRow [1
                       | i == row && j == col && mark' /= E = Left "Position is non-empty"
                       | otherwise                          = Right mark'
 
--- isFinished
+hasWinner :: Board -> Bool
+hasWinner (Board rows) =
+  or [
+    checkRows rows,
+    checkRows . transpose $ rows,
+    checkRows [diagonal rows [0,1,2]],
+    checkRows [diagonal rows [2,1,0]]
+  ]
+  where
+    checkRows = any (\row -> any ($ row) [all (==X), all (==O)])
+    diagonal = zipWith (!!)
+
+isFull :: Board -> Bool
+isFull = undefined
 
 main :: IO ()
 main = do
