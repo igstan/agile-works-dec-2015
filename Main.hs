@@ -6,6 +6,8 @@ data Mark = X | O | E deriving Eq
 
 data Board = Board [[Mark]]
 
+data Player = PlayerX | PlayerO
+
 data GameState =
   GameState {
     board :: Board
@@ -42,15 +44,20 @@ readInt "2" = Right 2
 readInt "3" = Right 3
 readInt r   = Left ("Invalid row: " ++ r)
 
+getMark :: Player -> Mark
+getMark PlayerX = X
+getMark PlayerO = O
+
+next :: Player -> Player
+next PlayerX = PlayerO
+next PlayerO = PlayerX
 
 addMark :: Position -> Mark -> Board -> Either String Board
 addMark (col, row) mark (Board rows) = fmap Board $ sequence $ zipWith mapRow [1..] rows
   where
-     mapRow :: Int -> [Mark] -> Either String [Mark]
      mapRow i row' = sequence $ zipWith (mapCol i) [1..] row'
-     mapCol :: Int -> Int -> Mark -> Either String Mark
      mapCol i j mark' | i == row && j == col && mark' == E = Right mark
-                      | i == row && j == col && mark' /= E = Left "Position is non-empty"
+                      | i == row && j == col && mark' /= E = Left "Position taken. Try again."
                       | otherwise                          = Right mark'
 
 hasWinner :: Board -> Bool
@@ -70,21 +77,35 @@ isFull (Board rows) = all (/= E) $ concat rows
 
 emptyBoard = Board [[E,E,E], [E,E,E], [E,E,E]]
 
-loop :: Board -> IO ()
-loop board =
+loop :: Board -> Player -> IO ()
+loop board player =
   do
-  line <- getLine
-  case readPosition line of
-    Left msg -> putStrLn ("Error: " ++ msg)
-    Right pos -> do
-      let newBoard = addMark pos X board
-      putStrLn $ show $ newBoard
-      loop newBoard
-
+    line <- getLine
+    result <- return $ do
+      pos <- readPosition line
+      newBoard <- addMark pos (getMark player) board
+      let msg = if hasWinner newBoard
+          then announceVictor player
+          else
+            if isFull newBoard
+            then announceDraw
+            else show newBoard
+      return (msg, newBoard)
+    case result of
+      Left msg -> do
+        putStrLn msg
+        loop board player
+      Right (msg, newBoard) -> do
+        putStrLn msg
+        loop newBoard (next player)
+  where
+    announceVictor PlayerX = "X has won"
+    announceVictor PlayerO = "O has won"
+    announceDraw = "It's a draw!"
 
 main :: IO ()
 main =
   do
   putStrLn "Hello!"
   putStrLn "Let's play Tic-Tac-Toe!"
-  loop emptyBoard
+  loop emptyBoard PlayerX
