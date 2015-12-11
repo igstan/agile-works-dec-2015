@@ -11,7 +11,8 @@ data Player = PlayerX | PlayerO
 data GameState =
   GameState {
     board :: Board,
-    player :: Player
+    player :: Player,
+    finished :: Bool
   }
 
 type Position = (Int, Int)
@@ -24,13 +25,6 @@ instance Show Mark where
 instance Show Board where
   show (Board rows) = concat . intersperse "\n" . map showRow $ rows
     where showRow = intersperse ' ' . concat . map show
-
-testBoard =
-  Board [
-    [X, O, E],
-    [X, O, E],
-    [X, O, E]
-  ]
 
 readPosition :: String -> Either String Position
 readPosition ('A' : n) = readInt n >>= \n -> Right (1, n)
@@ -77,39 +71,46 @@ isFull :: Board -> Bool
 isFull (Board rows) = all (/= E) $ concat rows
 
 emptyBoard = Board [[E,E,E], [E,E,E], [E,E,E]]
+initialState = GameState emptyBoard PlayerX False
 
-nextState :: String -> GameState -> Either String (String, Board)
-nextState line gameState =
+nextState' :: String -> GameState -> Either String (String, Bool, Board)
+nextState' line gameState =
   do
     pos <- readPosition line
     newBoard <- addMark pos (getMark $ player gameState) (board gameState)
-    let msg = if hasWinner newBoard X || hasWinner newBoard O
-        then announceVictor $ player gameState
+    let (msg, finished) = if hasWinner newBoard X || hasWinner newBoard O
+        then (announceVictor $ player gameState, True)
         else
           if isFull newBoard
-          then announceDraw
-          else show newBoard
-    return (msg, newBoard)
+          then (announceDraw, True)
+          else (show newBoard, False)
+    return (msg, finished, newBoard)
   where
     announceVictor PlayerX = "X has won"
     announceVictor PlayerO = "O has won"
     announceDraw = "It's a draw!"
 
-loop :: Board -> Player -> IO ()
-loop board player =
+nextState :: GameState -> IO GameState
+nextState gameState@(GameState board player finished) =
   do
     line <- getLine
-    result <- return $ nextState line (GameState board player)
-    let (msg, newBoard, newPlayer) =
+    result <- return $ nextState' line gameState
+    let (msg, finished, newBoard, newPlayer) =
           case result of
-            Left msg -> (msg, board, player)
-            Right (msg, newBoard) -> (msg, newBoard, next player)
+            Left msg -> (msg, False, board, player)
+            Right (msg, finished, newBoard) -> (msg, finished, newBoard, next player)
     putStrLn msg
-    loop newBoard newPlayer
+    return $ GameState newBoard newPlayer finished
 
-main :: IO ()
+iterateUntilM :: (Monad m) => (a -> Bool) -> (a -> m a) -> a -> m a
+iterateUntilM p f v
+    | p v       = return v
+    | otherwise = f v >>= iterateUntilM p f
+
+main :: IO GameState
 main =
   do
   putStrLn "Hello!"
   putStrLn "Let's play Tic-Tac-Toe!"
-  loop emptyBoard PlayerX
+  iterateUntilM finished nextState initialState
+
