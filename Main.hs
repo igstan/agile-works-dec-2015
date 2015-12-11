@@ -10,7 +10,8 @@ data Player = PlayerX | PlayerO
 
 data GameState =
   GameState {
-    board :: Board
+    board :: Board,
+    player :: Player
   }
 
 type Position = (Int, Int)
@@ -77,31 +78,34 @@ isFull (Board rows) = all (/= E) $ concat rows
 
 emptyBoard = Board [[E,E,E], [E,E,E], [E,E,E]]
 
-loop :: Board -> Player -> IO ()
-loop board player =
+nextState :: String -> GameState -> Either String (String, Board)
+nextState line gameState =
   do
-    line <- getLine
-    result <- return $ do
-      pos <- readPosition line
-      newBoard <- addMark pos (getMark player) board
-      let msg = if hasWinner newBoard
-          then announceVictor player
-          else
-            if isFull newBoard
-            then announceDraw
-            else show newBoard
-      return (msg, newBoard)
-    case result of
-      Left msg -> do
-        putStrLn msg
-        loop board player
-      Right (msg, newBoard) -> do
-        putStrLn msg
-        loop newBoard (next player)
+    pos <- readPosition line
+    newBoard <- addMark pos (getMark $ player gameState) (board gameState)
+    let msg = if hasWinner newBoard X || hasWinner newBoard O
+        then announceVictor $ player gameState
+        else
+          if isFull newBoard
+          then announceDraw
+          else show newBoard
+    return (msg, newBoard)
   where
     announceVictor PlayerX = "X has won"
     announceVictor PlayerO = "O has won"
     announceDraw = "It's a draw!"
+
+loop :: Board -> Player -> IO ()
+loop board player =
+  do
+    line <- getLine
+    result <- return $ nextState line (GameState board player)
+    let (msg, newBoard, newPlayer) =
+          case result of
+            Left msg -> (msg, board, player)
+            Right (msg, newBoard) -> (msg, newBoard, next player)
+    putStrLn msg
+    loop newBoard newPlayer
 
 main :: IO ()
 main =
