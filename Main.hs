@@ -60,8 +60,8 @@ addMark (col, row) mark (Board rows) = fmap Board $ sequence $ zipWith mapRow [1
                       | i == row && j == col && mark' /= E = Left "Position taken. Try again."
                       | otherwise                          = Right mark'
 
-hasWinner :: Board -> Bool
-hasWinner (Board rows) =
+hasWinner :: Board -> Mark -> Bool
+hasWinner (Board rows) mark =
   or [
     checkRows rows,
     checkRows . transpose $ rows,
@@ -69,7 +69,7 @@ hasWinner (Board rows) =
     checkRows [diagonal rows [2,1,0]]
   ]
   where
-    checkRows = any (\row -> any ($ row) [all (==X), all (==O)])
+    checkRows = any $ all (== mark)
     diagonal = zipWith (!!)
 
 isFull :: Board -> Bool
